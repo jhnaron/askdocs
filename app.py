@@ -4,6 +4,7 @@ from index import get_or_build_index, DOCS_DIR
 
 MAX_INPUT_LENGTH = 250
 TOP_K = 4
+MAX_HISTORY_TURNS = 6
 
 PAPERS = {
     "2026-Jan-08_constitutional-classifiers-plus.pdf": {
@@ -68,24 +69,58 @@ PAPERS = {
 
 PAPER_TITLES = "\n".join(f"- {p['label']}" for p in PAPERS.values())
 
-SYSTEM_PROMPT_TEMPLATE = """You are a research assistant for AskDocs, an app that answers questions about Anthropic research papers.
+SYSTEM_PROMPT_TEMPLATE = """You are a knowledgeable AI research assistant for AskDocs. You answer questions about AI — including AI safety, ethics, alignment, security, and reasoning — grounded in Anthropic's published research papers.
 
 The available papers are:
 {paper_titles}
 
-Answer the user's question using only the context below. If the question is not related to the papers, politely let them know what you can help with. If the answer is not in the context, say so clearly. Always mention which source you used.
+Guidelines:
+- Answer any AI-related question by drawing from the context below.
+- If a question is broad (e.g. "why is AI dangerous?"), answer it using what the papers say rather than redirecting the user.
+- If the answer is not in the context, say so clearly and suggest which paper might cover it.
+- When citing a single source, mention it inline. When citing more than one source, use numbered citations like [1], [2] and list them at the end of your response.
+- Never use markdown headers (no # or ##). Use numbered lists when presenting multiple points or categories.
+- Never refuse an AI-related question — always try to connect it to the research.
+- Only redirect the user if the question has nothing to do with AI.
 
 Context:
 {context}"""
+
+REWRITE_PROMPT = """Given the conversation history below and the user's latest message, rewrite the message as a clear, standalone search query that can be used to find relevant content in a research paper database. Output only the rewritten query with no explanation.
+
+Conversation history:
+{history}
+
+User's latest message: {question}"""
 
 
 def get_anthropic_client():
     return anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
 
 
-def retrieve_context(collection, question: str) -> tuple[list[str], list[str]]:
+def rewrite_query(client, history: list[dict], question: str) -> str:
+    # If there's no history, the question is already standalone
+    if not history:
+        return question
+
+    history_text = "\n".join(
+        f"{m['role'].capitalize()}: {m['content']}" for m in history[-4:]
+    )
+
+    response = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=100,
+        messages=[{
+            "role": "user",
+            "content": REWRITE_PROMPT.format(history=history_text, question=question),
+        }],
+    )
+    return response.content[0].text.strip()
+
+
+def retrieve_context(collection, query: str) -> tuple[list[str], list[str]]:
     # Find the TOP_K most relevant chunks from the vector store
-    results = collection.query(query_texts=[question], n_results=TOP_K)
+    results = collection.query(query_texts=[query], n_results=TOP_K)
     chunks = results["documents"][0]
     sources = [m["source"] for m in results["metadatas"][0]]
     return chunks, sources
@@ -103,12 +138,12 @@ def build_system_prompt(chunks: list[str], sources: list[str]) -> str:
 
 
 def ask_claude(client, system_prompt: str, history: list[dict], question: str) -> str:
-    # Build the full message history so Claude remembers earlier turns
-    messages = [{"role": m["role"], "content": m["content"]} for m in history]
+    trimmed = history[-(MAX_HISTORY_TURNS):]
+    messages = [{"role": m["role"], "content": m["content"]} for m in trimmed]
     messages.append({"role": "user", "content": question})
 
     response = client.messages.create(
-        model="claude-sonnet-4-6",
+        model="claude-haiku-4-5-20251001",
         max_tokens=1024,
         system=system_prompt,
         messages=messages,
@@ -176,13 +211,15 @@ if prompt := st.chat_input("Ask something..."):
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    chunks, sources = retrieve_context(collection, prompt)
+    history = st.session_state.messages[:-1]
+
+    # Rewrite the query using conversation context before searching
+    retrieval_query = rewrite_query(anthropic_client, history, prompt)
+    chunks, sources = retrieve_context(collection, retrieval_query)
     system_prompt = build_system_prompt(chunks, sources)
 
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            # Pass full history minus the current message we just appended
-            history = st.session_state.messages[:-1]
             answer = ask_claude(anthropic_client, system_prompt, history, prompt)
             st.markdown(answer)
 
