@@ -10,10 +10,9 @@ COLLECTION_NAME = "askdocs"
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
 
-# Papers to download automatically if the docs folder is empty
 PAPERS = {
     "constitutional_ai.pdf": "https://arxiv.org/pdf/2212.08073",
-    "responsible-scaling-policy.pdf": "https://www-cdn.anthropic.com/1adf000c8f675958c2ee23805d91aaade1cd4613/responsible-scaling-policy.pdf",
+    "responsible-scaling-policy.pdf": "https://assets.anthropic.com/m/24a47b00f10301cd/original/Anthropic-Responsible-Scaling-Policy-2024-10-15.pdf",
 }
 
 
@@ -27,7 +26,12 @@ def download_papers():
         dest = DOCS_DIR / filename
         if not dest.exists():
             print(f"Downloading {filename}...")
-            urllib.request.urlretrieve(url, dest)
+            request = urllib.request.Request(
+                url,
+                headers={"User-Agent": "Mozilla/5.0"}
+            )
+            with urllib.request.urlopen(request) as response:
+                dest.write_bytes(response.read())
             print(f"Saved {filename}.")
 
 
