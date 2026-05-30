@@ -26,6 +26,18 @@ PAPERS = {
     },
 }
 
+PAPER_TITLES = "\n".join(f"- {p['label']}" for p in PAPERS.values())
+
+SYSTEM_PROMPT_TEMPLATE = """You are a research assistant for AskDocs, an app that answers questions about Anthropic research papers.
+
+The available papers are:
+{paper_titles}
+
+Answer the user's question using only the context below. If the question is not related to the papers, politely let them know what you can help with. If the answer is not in the context, say so clearly. Always mention which source you used.
+
+Context:
+{context}"""
+
 
 def get_anthropic_client():
     return anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
@@ -44,10 +56,9 @@ def build_system_prompt(chunks: list[str], sources: list[str]) -> str:
     context_blocks = "\n\n---\n\n".join(
         f"[Source: {src}]\n{chunk}" for src, chunk in zip(sources, chunks)
     )
-    return (
-        "You are a research assistant. Answer the user's question using only the context below. "
-        "If the answer is not in the context, say so clearly. Always mention which source you used.\n\n"
-        f"Context:\n{context_blocks}"
+    return SYSTEM_PROMPT_TEMPLATE.format(
+        paper_titles=PAPER_TITLES,
+        context=context_blocks,
     )
 
 
