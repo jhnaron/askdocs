@@ -1,4 +1,5 @@
 from pathlib import Path
+import urllib.request
 import chromadb
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 from pypdf import PdfReader
@@ -9,9 +10,25 @@ COLLECTION_NAME = "askdocs"
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
 
+# Papers to download automatically if the docs folder is empty
+PAPERS = {
+    "constitutional_ai.pdf": "https://arxiv.org/pdf/2212.08073",
+    "responsible-scaling-policy.pdf": "https://www-cdn.anthropic.com/1adf000c8f675958c2ee23805d91aaade1cd4613/responsible-scaling-policy.pdf",
+}
+
 
 def get_embedding_fn():
     return SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
+
+
+def download_papers():
+    DOCS_DIR.mkdir(exist_ok=True)
+    for filename, url in PAPERS.items():
+        dest = DOCS_DIR / filename
+        if not dest.exists():
+            print(f"Downloading {filename}...")
+            urllib.request.urlretrieve(url, dest)
+            print(f"Saved {filename}.")
 
 
 def read_pdf(path: Path) -> str:
@@ -31,6 +48,8 @@ def split_into_chunks(text: str) -> list[str]:
 
 
 def build_index():
+    download_papers()
+
     pdf_files = list(DOCS_DIR.glob("*.pdf"))
 
     if not pdf_files:
