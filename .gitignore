@@ -4,9 +4,6 @@
 # vector index (rebuilt automatically on startup)
 chroma_db/
 
-# papers are downloaded automatically at runtime
-docs/
-
 # python
 __pycache__/
 *.pyc
