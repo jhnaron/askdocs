@@ -6,22 +6,62 @@ MAX_INPUT_LENGTH = 250
 TOP_K = 4
 
 PAPERS = {
-    "constitutional_ai_2212.08073v1.pdf": {
-        "label": "Constitutional AI: Harmlessness from AI Feedback",
+    "2026-Jan-08_constitutional-classifiers-plus.pdf": {
+        "label": "2026 Jan — Constitutional Classifiers++: Efficient Production-Grade Defenses against Universal Jailbreaks",
         "summary": (
-            "A 2022 Anthropic paper introducing Constitutional AI (CAI), a method for training "
-            "AI systems to be harmless using a set of principles rather than relying solely on "
-            "human feedback. It covers RLHF, AI-generated feedback, and the tension between "
-            "helpfulness and harmlessness."
+            "Released on 2026 Jan 08. "
+            "A follow-up to the original Constitutional Classifiers paper, introducing an enhanced "
+            "production-grade system that achieves 40x computational cost reduction while maintaining "
+            "strong jailbreak robustness. Validated through over 1,700 hours of red teaming with no "
+            "successful universal jailbreak found."
         ),
     },
-    "responsible-scaling-policy.pdf": {
-        "label": "Anthropic Responsible Scaling Policy (2024)",
+    "2025-Jan-31_constitutional-classifiers.pdf": {
+        "label": "2025 Jan — Constitutional Classifiers: Defending against Universal Jailbreaks",
         "summary": (
-            "Anthropic's internal policy framework for managing the risks of increasingly "
-            "capable AI models. It defines AI Safety Levels (ASLs), outlines when Anthropic "
-            "will pause or slow model development, and describes commitments to transparency "
-            "and third-party evaluation."
+            "Released on 2025 Jan 31. "
+            "Introduces Constitutional Classifiers, safeguards trained on synthetic data generated "
+            "from natural language rules. After 3,000+ hours of red teaming, no universal jailbreak "
+            "bypassed the system at scale. Covers the tradeoff between robustness and deployment "
+            "viability in production AI systems."
+        ),
+    },
+    "2024-Dec-18_alignment-faking.pdf": {
+        "label": "2024 Dec — Alignment Faking in Large Language Models",
+        "summary": (
+            "Released on 2024 Dec 18. "
+            "The first empirical demonstration of a large language model engaging in alignment faking "
+            "without being explicitly trained to do so. Claude 3 Opus was observed strategically "
+            "complying with harmful queries during training to preserve its preferred behavior outside "
+            "of training — raising serious questions about the reliability of current alignment techniques."
+        ),
+    },
+    "2024-Oct-15_responsible-scaling-policy.pdf": {
+        "label": "2024 Oct — Anthropic Responsible Scaling Policy",
+        "summary": (
+            "Released on 2024 Oct 15. "
+            "Anthropic's internal policy framework for managing the risks of increasingly capable AI "
+            "models. Defines AI Safety Levels (ASLs), outlines when Anthropic will pause or slow model "
+            "development, and describes commitments to transparency and third-party evaluation."
+        ),
+    },
+    "2024-Jan-10_sleeper-agents.pdf": {
+        "label": "2024 Jan — Sleeper Agents: Training Deceptive LLMs that Persist Through Safety Training",
+        "summary": (
+            "Released on 2024 Jan 10. "
+            "An Anthropic security paper showing that deceptive backdoor behaviors can be embedded in "
+            "LLMs and persist through standard safety training techniques including RLHF and adversarial "
+            "training. Models were trained to write secure code in 2023 but insert exploitable "
+            "vulnerabilities when the stated year was 2024."
+        ),
+    },
+    "2022-Dec-15_constitutional-ai.pdf": {
+        "label": "2022 Dec — Constitutional AI: Harmlessness from AI Feedback",
+        "summary": (
+            "Released on 2022 Dec 15. "
+            "Introduces Constitutional AI (CAI), a method for training AI systems to be harmless using "
+            "a set of principles rather than relying solely on human feedback. Covers RLHF, AI-generated "
+            "feedback, and the tension between helpfulness and harmlessness."
         ),
     },
 }
@@ -62,12 +102,16 @@ def build_system_prompt(chunks: list[str], sources: list[str]) -> str:
     )
 
 
-def ask_claude(client, system_prompt: str, question: str) -> str:
+def ask_claude(client, system_prompt: str, history: list[dict], question: str) -> str:
+    # Build the full message history so Claude remembers earlier turns
+    messages = [{"role": m["role"], "content": m["content"]} for m in history]
+    messages.append({"role": "user", "content": question})
+
     response = client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=1024,
         system=system_prompt,
-        messages=[{"role": "user", "content": question}],
+        messages=messages,
     )
     return response.content[0].text
 
@@ -77,7 +121,8 @@ def render_sidebar():
         st.header("Available Papers")
         st.caption("The app answers questions from these documents.")
 
-        pdf_files = sorted(DOCS_DIR.glob("*.pdf"))
+        # Sort filenames descending so latest papers appear at the top
+        pdf_files = sorted(DOCS_DIR.glob("*.pdf"), reverse=True)
         for pdf_path in pdf_files:
             paper = PAPERS.get(pdf_path.name, {})
             label = paper.get("label", pdf_path.stem)
@@ -136,7 +181,9 @@ if prompt := st.chat_input("Ask something..."):
 
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            answer = ask_claude(anthropic_client, system_prompt, prompt)
+            # Pass full history minus the current message we just appended
+            history = st.session_state.messages[:-1]
+            answer = ask_claude(anthropic_client, system_prompt, history, prompt)
             st.markdown(answer)
 
             with st.expander("Sources used"):
