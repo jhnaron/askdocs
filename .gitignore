@@ -1,5 +1,5 @@
-# secrets and local config
-.streamlit/
+# secrets — never commit
+.streamlit/secrets.toml
 
 # vector index (rebuilt automatically on startup)
 chroma_db/
