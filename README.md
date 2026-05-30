@@ -1,6 +1,7 @@
 # AskDocs
 
 Try [**AskDocs**](https://johnaronb-askdocs.streamlit.app)
+
 A RAG app that lets you ask questions about Anthropic research papers. It retrieves relevant
 sections from the papers and uses Claude to answer based on what it finds.
 
@@ -70,8 +71,9 @@ The app builds the index automatically on first startup if one does not exist ye
 
 1. Push the repo to a public GitHub repository
 2. Go to share.streamlit.io and connect the repo
-3. Fill out details and on the Advanced Settings' secret settings add `'ANTHROPIC_API_KEY = "your-key-here"`.
-4. On first boot, the app will build the index from the PDFs in the `docs/` folder automatically
+3. Fill out the app details and select the correct Python version you used locally.
+4. Head to Advanced Settings' secret settings add `'ANTHROPIC_API_KEY = "your-key-here"`.
+5. On first boot, the app will build the index from the PDFs in the `docs/` folder automatically
 
 ---
 
