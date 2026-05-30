@@ -1,9 +1,30 @@
 import streamlit as st
 import anthropic
-from index import get_or_build_index
+from index import get_or_build_index, DOCS_DIR
 
 MAX_INPUT_LENGTH = 250
 TOP_K = 4
+
+PAPERS = {
+    "constitutional_ai_2212.08073v1.pdf": {
+        "label": "Constitutional AI: Harmlessness from AI Feedback",
+        "summary": (
+            "A 2022 Anthropic paper introducing Constitutional AI (CAI), a method for training "
+            "AI systems to be harmless using a set of principles rather than relying solely on "
+            "human feedback. It covers RLHF, AI-generated feedback, and the tension between "
+            "helpfulness and harmlessness."
+        ),
+    },
+    "responsible-scaling-policy.pdf": {
+        "label": "Anthropic Responsible Scaling Policy (2024)",
+        "summary": (
+            "Anthropic's internal policy framework for managing the risks of increasingly "
+            "capable AI models. It defines AI Safety Levels (ASLs), outlines when Anthropic "
+            "will pause or slow model development, and describes commitments to transparency "
+            "and third-party evaluation."
+        ),
+    },
+}
 
 
 def get_anthropic_client():
@@ -40,7 +61,30 @@ def ask_claude(client, system_prompt: str, question: str) -> str:
     return response.content[0].text
 
 
-st.set_page_config(page_title="AskDocs")
+def render_sidebar():
+    with st.sidebar:
+        st.header("Available Papers")
+        st.caption("The app answers questions from these documents.")
+
+        pdf_files = sorted(DOCS_DIR.glob("*.pdf"))
+        for pdf_path in pdf_files:
+            paper = PAPERS.get(pdf_path.name, {})
+            label = paper.get("label", pdf_path.stem)
+            summary = paper.get("summary", "No summary available.")
+
+            with st.expander(label):
+                st.caption(summary)
+                with open(pdf_path, "rb") as f:
+                    st.download_button(
+                        label="Download",
+                        data=f,
+                        file_name=pdf_path.name,
+                        mime="application/pdf",
+                        key=pdf_path.name,
+                    )
+
+
+st.set_page_config(page_title="AskDocs", layout="wide")
 st.title("AskDocs")
 st.caption("Ask questions about Anthropic research papers.")
 
@@ -55,6 +99,8 @@ except Exception as e:
     st.stop()
 
 anthropic_client = st.cache_resource(get_anthropic_client)()
+
+render_sidebar()
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
