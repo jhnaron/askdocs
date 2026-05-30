@@ -158,6 +158,11 @@ CUSTOM_CSS = """
 [data-testid="stSidebar"] details[open] summary {
     color: #5DCAA5 !important;
 }
+/* hide streamlit's toolbar github icon */
+[data-testid="stToolbarActionButtonIcon"] { display: none !important; }
+a[href*="github.com/jhnaron/askdocs"][data-testid] { display: none !important; }
+.stToolbar a[aria-label="View app source"] { display: none !important; }
+header [data-testid="stToolbar"] a { display: none !important; }
 .fork-btn {
     position: fixed;
     top: 14px;
