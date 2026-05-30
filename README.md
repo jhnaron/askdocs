@@ -1,15 +1,14 @@
 # AskDocs
 
+Try [**AskDocs**](https://johnaronb-askdocs.streamlit.app)
 A RAG app that lets you ask questions about Anthropic research papers. It retrieves relevant
 sections from the papers and uses Claude to answer based on what it finds.
-
-Built by [John Aron Belmonte](https://www.linkedin.com/in/johnaronb/)
 
 ---
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.10+ (The streamlit app specifically uses Python 3.12)
 - An Anthropic API key (get one at platform.anthropic.com)
 
 ---
@@ -71,15 +70,15 @@ The app builds the index automatically on first startup if one does not exist ye
 
 1. Push the repo to a public GitHub repository
 2. Go to share.streamlit.io and connect the repo
-3. Add your `ANTHROPIC_API_KEY` under the app's Secrets settings
+3. Fill out details and on the Advanced Settings' secret settings add `'ANTHROPIC_API_KEY = "your-key-here"`.
 4. On first boot, the app will build the index from the PDFs in the `docs/` folder automatically
 
 ---
 
 ## Notes
 
-- Questions are capped at 250 characters
-- Set a monthly spend limit on your Anthropic account as a cost safety net
+- Questions are capped at 250 characters.
+- Set a monthly spend limit on your Anthropic account as a cost safety net.
 - The research papers in `docs/` are the intellectual property of Anthropic, PBC and are
   included here for educational purposes only. All rights to those documents remain with
   their respective authors and Anthropic.
